@@ -1,0 +1,77 @@
+﻿using System;
+using System.Xml.Serialization;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Netcode;
+using StardewValley.TerrainFeatures;
+using StardewValley;
+using StardewModdingAPI;
+using Tileman;
+
+namespace Tileman
+{
+    public class KaiTile 
+    {
+
+        public int tileX = 0;
+        public int tileY = 0;
+        public int tileW = Game1.tileSize;
+        public int tileH = Game1.tileSize;
+        public string tileIsWhere = null;
+        public KaiTile(int TileX,int TileY, string TileIsWhere)
+        {
+            this.tileX = TileX;
+            this.tileY = TileY;
+            this.tileIsWhere = TileIsWhere;
+        }
+
+
+        public void DrawTile(Texture2D texture, SpriteBatch spriteBatch) 
+        {
+
+            if (Game1.getLocationFromName(this.tileIsWhere) == Game1.currentLocation)
+            {
+                float offsetX = Game1.viewport.X;
+                float offsetY = Game1.viewport.Y;
+
+
+                spriteBatch.Draw(texture,
+                    Utility.getRectangleCenteredAt(new Vector2((this.tileX + 1) * 64 - offsetX - 32, (this.tileY + 1) * 64 - offsetY - 32), 64),
+                    Color.White);
+            }
+
+
+
+        }
+
+        public void PlayerCollisionCheck()
+        {
+
+            if(Game1.getLocationFromName(this.tileIsWhere) == Game1.currentLocation)
+            {
+
+                Rectangle tileBox = new(this.tileX * 64, this.tileY * 64, this.tileW, this.tileH);
+
+
+
+                if (Game1.player.nextPosition(Game1.player.facingDirection).Intersects(tileBox))
+                {
+                    Game1.player.Position = Game1.player.lastPosition;
+
+                }
+
+
+
+
+                }
+
+        }
+
+        public bool IsSpecifiedTile(int TileX, int TileY, string TileIsWhere) {
+            if (TileX == tileX && TileY == tileY && TileIsWhere == tileIsWhere) return true;
+            return false;
+        }
+
+
+    }
+}
