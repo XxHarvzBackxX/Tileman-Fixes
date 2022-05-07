@@ -9,12 +9,14 @@ namespace Tileman
     class ModData
 
     {
-        public bool ToPlaceTiles { get; set; } = true;
-        public double TilePrice { get; set; }
+        public bool ToPlaceTiles { get; set; }
 
+        public bool DoCollision { get; set; }   
+        public bool ToggleOverlay { get; set; }
+        public double TilePrice { get; set; }
         public double TilePriceRaise { get; set; }
 
+        public int CavernsExtra { get; set; }
 
-        public List<KaiTile> AllKaiTiles { get; set; } = new();//new KaiTile(30,20, StardewValley.Game1.getLocationFromName("Farm") ) );
     }
 }

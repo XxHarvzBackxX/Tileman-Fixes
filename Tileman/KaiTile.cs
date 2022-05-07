@@ -1,12 +1,7 @@
-﻿using System;
-using System.Xml.Serialization;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Netcode;
-using StardewValley.TerrainFeatures;
 using StardewValley;
-using StardewModdingAPI;
-using Tileman;
+
 
 namespace Tileman
 {
@@ -44,28 +39,7 @@ namespace Tileman
 
         }
 
-        public void PlayerCollisionCheck()
-        {
-
-            if(Game1.getLocationFromName(this.tileIsWhere) == Game1.currentLocation)
-            {
-
-                Rectangle tileBox = new(this.tileX * 64, this.tileY * 64, this.tileW, this.tileH);
-
-
-
-                if (Game1.player.nextPosition(Game1.player.facingDirection).Intersects(tileBox))
-                {
-                    Game1.player.Position = Game1.player.lastPosition;
-
-                }
-
-
-
-
-                }
-
-        }
+        
 
         public bool IsSpecifiedTile(int TileX, int TileY, string TileIsWhere) {
             if (TileX == tileX && TileY == tileY && TileIsWhere == tileIsWhere) return true;
