@@ -83,7 +83,20 @@ namespace Tileman
             {
                 KaiTile t = tileData.AllKaiTilesList[i];
 
-                if (t.IsSpecifiedTile(xTile, yTile, gameLocation)) tempList.Remove(t);
+                if (t.IsSpecifiedTile(xTile, yTile, gameLocation)) {
+                    
+                    tempList.Remove(t);
+                    var location = Game1.getLocationFromName(gameLocation);
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Buildable");
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Diggable");
+
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "NoFurtniture");
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers");
+
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Passable");
+                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Placeable");
+
+                }
 
             }
             var mapData = new MapData
@@ -120,7 +133,7 @@ namespace Tileman
 
             var tempName = "Town";
 
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{tempName}.json") ?? new MapData();
+            var tileData = Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{tempName}.json") ?? new MapData();
 
             var tempTiles = tileData.AllKaiTilesList;
 
@@ -149,19 +162,20 @@ namespace Tileman
             tempTiles.Add(new KaiTile(55, 106, tempName));
             tempTiles.Add(new KaiTile(55, 107, tempName));
 
-            //tileList.Add(tempTiles);
-            tempTiles = new();
+            
 
 
             var mapData = new MapData
             {
-                AllKaiTilesList = tileList,
+                AllKaiTilesList = tempTiles,
             };
+
+            //tileList.Add(tempTiles);
+            tempTiles = new();
 
 
 
             Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{tempName}.json", mapData);
-            tileList = new();
 
             //
             //specific tiles to add in /// COPY ABOVE
@@ -236,9 +250,8 @@ namespace Tileman
         {
             if (!Context.IsWorldReady) return;
             
-            if (Game1.CurrentEvent != null)  return;
+            if (Game1.CurrentEvent != null )  return;
             
-
 
             GroupIfLocationChange();
 
@@ -288,7 +301,6 @@ namespace Tileman
                             }
 
                             t.DrawTile(texture, e.SpriteBatch);
-
                         }
                          
 
@@ -384,7 +396,6 @@ namespace Tileman
             {
                 
                 Game1.player.Money -= floor_price;
-                //Monitor.Log($"Bought Tile({thisTile.tileX},{thisTile.tileY}) for ${floor_price}", LogLevel.Debug);
 
                 switch(difficulty_mode)
                 {
@@ -411,6 +422,19 @@ namespace Tileman
                 purchase_count++;
 
                 Game1.playSoundPitched("purchase", 700 + (100* new Random().Next(0, 7)) );
+
+                
+
+                var gameLocation = Game1.currentLocation;
+
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Buildable");
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Diggable");
+
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "NoFurniture");
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "NoSprinklers");
+
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Passable");
+                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Placeable");
 
                 ThisLocationTiles.Remove(thisTile);
                 tileList.Remove(thisTile);
@@ -539,7 +563,7 @@ namespace Tileman
                 for (int j = 1; j < mapHeight - 1; j++)
                 {
                     if (/*!IsTileAt(i, j, mapLocation)
-                        && */!mapLocation.isObjectAtTile(i, j) 
+                        &&*/ !mapLocation.isObjectAtTile(i, j) 
                         && !mapLocation.isOpenWater(i, j) 
                         && !mapLocation.isTerrainFeatureAt(i, j) 
                         && mapLocation.isTilePlaceable(new Vector2(i, j))
@@ -601,6 +625,21 @@ namespace Tileman
             var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json") ?? new MapData();
             ThisLocationTiles = tileData.AllKaiTilesList;
             
+            for(int i = 0; i < ThisLocationTiles.Count; i++)
+            {
+                var t = ThisLocationTiles[i];
+                
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Buildable", "false");
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "");
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoFurniture", "true");
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers", "");
+
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Passable", "");
+                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Placeable", "");
+                
+                
+
+            }
 
         }
 
@@ -673,16 +712,22 @@ namespace Tileman
 
                 if (playerBox.Center == tileBox.Center || playerBox.Intersects(tileBox) && locationDelay > 0)
                 {
+                    var gameLocation = Game1.currentLocation;
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Buildable");
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Diggable");
+
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoFurtniture");
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoSprinklers");
+
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Passable");
+                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Placeable");
+
 
                     ThisLocationTiles.Remove(tile);
                     tileList.Remove(tile);
                 }
 
-                else if (locationDelay <= 0 && Game1.player.nextPosition(Game1.player.facingDirection).Intersects(tileBox))
-                {
-                    Game1.player.Position = Game1.player.lastPosition;
-
-                }
+                
 
             }
 
@@ -693,7 +738,7 @@ namespace Tileman
         private void SaveModData(object sender, SavedEventArgs e) {
 
             //if (System.IO.File.Exists("config")) createJson("config");
-
+            SaveLocationTiles(Game1.currentLocation);
 
             var tileData = new ModData
             {

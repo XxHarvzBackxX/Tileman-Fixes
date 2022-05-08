@@ -3,7 +3,7 @@
 This is SpicyKai's Tileman Challenge!
 
 Most of the world is restricted behind tiles,
-and if you want to use them--or even get to Pierre's, you must buy my tiles!
+and if you want to use them--or even get to Pierre's you must buy my tiles!
 
 This mod was inspired by Setlled's Runescape Tileman challenge on Youtube, 
 Check him out here: https://www.youtube.com/c/Settledrs/featured
@@ -15,9 +15,7 @@ Here is a short explanation for the values used in the config.json (There are se
 
 
 ToPlaceTiles: 
-Tells the mod whether or not to put down tiles in each location,
-true -> generates tiles,
-false -> do not generate
+Tells the mod whether or not to put down tiles in each location. true -> place tiles, false -> do not.
 
 DoCollision:
 Does the mod check if you collide with tiles?
@@ -43,5 +41,8 @@ DifficultyMode
 0 -> Tile prices increase as normal,
 1 -> Tile price increase by 1 every 10x tiles purchased (10,100,1000...),
 2 -> Every single tile purchased increases the price by 1
+
+PurchaseCount
+int used to track tiles bought for pregression purposes
 
 ///
