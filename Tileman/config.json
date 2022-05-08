@@ -4,5 +4,7 @@
   "ToggleOverlay":  true,
   "TilePrice": 1.0,
   "TilePriceRaise": 0.0008,
-  "CavernsExtra":  0,
+  "CavernsExtra": 0,
+  "DifficultyMode": 0,
+  "PurchaseCount":  0,
 }

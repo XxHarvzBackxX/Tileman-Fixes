@@ -18,31 +18,32 @@ namespace Tileman
 
 
 
-        bool do_loop = true;
-        bool do_collision = true;
-        bool toggle_overlay = true;
+        public bool do_loop = true;
+        public bool do_collision = true;
+        public bool toggle_overlay = true;
+        private bool tool_button_pushed = false;
+
         public double tile_price = 1.0;
-        double tile_price_raise = 0.0008;
-        int caverns_extra = 0;
+        public double tile_price_raise = 0.0008;
 
 
-        int purchase_count=0;
+        public int caverns_extra = 0;
+        public int difficulty_mode = 0;
+        public int purchase_count=0;
+
         int tile_count;
 
         int amountLocations = 200;
         int locationDelay = 0;
 
-
-        List<KaiTile> allTiles = new();
+        List<KaiTile> tileList = new();
         List<KaiTile> ThisLocationTiles = new();
 
         Texture2D tileTexture  = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
         Texture2D tileTexture2 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
         Texture2D tileTexture3 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
 
-        public static readonly string dictPath = "Mods/SpicyKai.Tileman/tileData.json";
-
-        Dictionary<string, List<KaiTile>> tileDict = new();
+        
 
        
 
@@ -51,6 +52,7 @@ namespace Tileman
 
         public override void Entry(IModHelper helper)
         {
+            helper.Events.Input.ButtonReleased += this.OnButtonReleased;
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.Display.RenderedWorld += this.DrawUpdate;
 
@@ -73,26 +75,26 @@ namespace Tileman
         private void removeSpecificTile(int xTile, int yTile, string gameLocation)
         {
 
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{gameLocation}.json") ?? new MapData();
-            var tempDict = tileData.AllKaiTilesDict;
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation}.json") ?? new MapData();
+            var tempList = tileData.AllKaiTilesList;
 
 
-            for (int i = 0; i < tileData.AllKaiTilesDict[gameLocation].Count; i++)
+            for (int i = 0; i < tileData.AllKaiTilesList.Count; i++)
             {
-                KaiTile t = tileData.AllKaiTilesDict[gameLocation][i];
+                KaiTile t = tileData.AllKaiTilesList[i];
 
-                if (t.IsSpecifiedTile(xTile, yTile, gameLocation)) tempDict[gameLocation].Remove(t);
+                if (t.IsSpecifiedTile(xTile, yTile, gameLocation)) tempList.Remove(t);
 
             }
             var mapData = new MapData
             {
-                AllKaiTilesDict = tempDict,
+                AllKaiTilesList = tempList,
             };
 
 
 
-            Helper.Data.WriteJsonFile<MapData>($"jsons/{gameLocation}.json", mapData);
-            tileDict = new();
+            Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation}.json", mapData);
+            tileList = new();
 
 
 
@@ -118,9 +120,9 @@ namespace Tileman
 
             var tempName = "Town";
 
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{tempName}.json") ?? new MapData();
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{tempName}.json") ?? new MapData();
 
-            var tempTiles = tileData.AllKaiTilesDict[tempName];
+            var tempTiles = tileData.AllKaiTilesList;
 
             //ADD UNUSAL TILES HERE
             tempTiles.Add(new KaiTile(21, 42, tempName));
@@ -147,19 +149,19 @@ namespace Tileman
             tempTiles.Add(new KaiTile(55, 106, tempName));
             tempTiles.Add(new KaiTile(55, 107, tempName));
 
-            tileDict.Add(tempName, tempTiles);
+            //tileList.Add(tempTiles);
             tempTiles = new();
 
 
             var mapData = new MapData
             {
-                AllKaiTilesDict = tileDict,
+                AllKaiTilesList = tileList,
             };
 
 
 
-            Helper.Data.WriteJsonFile<MapData>($"jsons/{tempName}.json", mapData);
-            tileDict = new();
+            Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{tempName}.json", mapData);
+            tileList = new();
 
             //
             //specific tiles to add in /// COPY ABOVE
@@ -170,17 +172,16 @@ namespace Tileman
 
         private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
-            // ignore if player hasn't loaded a save yet
+            
 
+            // ignore if player hasn't loaded a save yet
             if (!Context.IsWorldReady) return;
 
 
             if (!Context.IsPlayerFree) return;
 
-            if (Game1.CurrentEvent != null)
-            {
-                return;
-            }
+            if (Game1.CurrentEvent != null) return;
+            
 
             if (e.Button == SButton.G)
             {
@@ -194,40 +195,21 @@ namespace Tileman
             if (!toggle_overlay) return;
             
 
-            if (e.Button.IsUseToolButton() /*|| e.IsDown(SButton.MouseRight*/)
-            {
+            if (e.Button.IsUseToolButton()) tool_button_pushed = true;
 
-
-                for (int i = 0; i < ThisLocationTiles.Count; i++)
-                {
-
-                    KaiTile t = ThisLocationTiles[i];
-                    //controller or keyboard
-                    
-                        //if cursor on tile
-                        if (/*Game1.curso && e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY ||*/
-                        Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
-                        {
-                            PurchaseTileCheck(t);
-                        }
-                    
-                    //mouse
-                    /*else
-                    {
-                        if (e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY )
-                        {
-                            PurchaseTileCheck(t);
-                        }
-
-                    }*/
-
-                }
-
-
-
-            }
 
             
+
+            
+
+
+
+        }
+
+        private void OnButtonReleased(object sender, ButtonReleasedEventArgs e)
+        {
+            if (e.Button.IsUseToolButton()) tool_button_pushed = false;
+
 
 
 
@@ -237,6 +219,7 @@ namespace Tileman
         {
 
             PlaceInMaps();
+            GetLocationTiles(Game1.currentLocation);
 
 
 
@@ -251,14 +234,10 @@ namespace Tileman
 
         private void DrawUpdate(object sender, RenderedWorldEventArgs e)
         {
-            if (!Context.IsWorldReady)
-            {
-                return;
-            }
-
-            if (Game1.CurrentEvent != null) {
-                return;
-            }
+            if (!Context.IsWorldReady) return;
+            
+            if (Game1.CurrentEvent != null)  return;
+            
 
 
             GroupIfLocationChange();
@@ -328,6 +307,8 @@ namespace Tileman
 
             }
 
+            if (tool_button_pushed) PurchaseTilePreCheck();
+
 
 
         }
@@ -352,7 +333,7 @@ namespace Tileman
 
         private bool IsTileAt(int tileX, int tileY, GameLocation TileIsAt)
         {
-            foreach (KaiTile t in allTiles)
+            foreach (KaiTile t in tileList)
             {
                 if (tileX == t.tileX && tileY == t.tileY && TileIsAt == Game1.getLocationFromName(t.tileIsWhere))
                 {
@@ -365,6 +346,36 @@ namespace Tileman
 
         }
 
+        private void PurchaseTilePreCheck()
+        {
+
+            for (int i = 0; i < ThisLocationTiles.Count; i++)
+            {
+
+                KaiTile t = ThisLocationTiles[i];
+                //controller or keyboard
+
+                //if cursor on tile
+                if (/*Game1.curso && e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY ||*/
+                Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
+                {
+                    PurchaseTileCheck(t);
+                }
+
+                //mouse
+                /*else
+                {
+                    if (e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY )
+                    {
+                        PurchaseTileCheck(t);
+                    }
+
+                }*/
+
+            }
+
+        }
+
         private void PurchaseTileCheck(KaiTile thisTile)
         {
             int floor_price = (int)Math.Floor(tile_price);
@@ -373,26 +384,36 @@ namespace Tileman
             {
                 
                 Game1.player.Money -= floor_price;
-                Monitor.Log($"Bought Tile({thisTile.tileX},{thisTile.tileY}) for ${floor_price}", LogLevel.Debug);
+                //Monitor.Log($"Bought Tile({thisTile.tileX},{thisTile.tileY}) for ${floor_price}", LogLevel.Debug);
 
-                //RAISE THIS NUMBER TO ADD AN INITIAL BUFFER BEFORE PRICE INCREASES
-                if (purchase_count > 0)
+                switch(difficulty_mode)
                 {
-                    tile_price += tile_price_raise;
+                    case 0: 
+                        //Slowly increase tile cost over time // Change 0 for initial buffer
+                        if (purchase_count > 0) tile_price += tile_price_raise;  
+                        break;
+
+                    case 1:
+                        //Increase tile cost through milestones
+                        if (purchase_count > 10) tile_price = 2;
+                        if (purchase_count > 100) tile_price = 3;
+                        if (purchase_count > 1000) tile_price = 4;
+                        if (purchase_count > 10000) tile_price = 5;
+                        break;
+
+                    case 3:
+                        //Increment tile price with each one purchased
+                        tile_price++;
+                        break;
                 }
+
                 tile_count--;
                 purchase_count++;
 
-                
-                
-
                 Game1.playSoundPitched("purchase", 700 + (100* new Random().Next(0, 7)) );
-                
 
-
-                
                 ThisLocationTiles.Remove(thisTile);
-                allTiles.Remove(thisTile);
+                tileList.Remove(thisTile);
 
             }
             else Game1.playSoundPitched("grunt", 700 + (100 * new Random().Next(0, 7)));
@@ -434,25 +455,18 @@ namespace Tileman
                         }
 
 
-                        tileDict.Add(location.Name, allTiles);
-                        allTiles = new();
-
-
                         var mapData = new MapData
                         {
-                            AllKaiTilesDict = tileDict,
+                            AllKaiTilesList = tileList,
                         };
 
 
 
-                        Helper.Data.WriteJsonFile<MapData>($"jsons/{location.Name}.json", mapData);
-                        tileDict = new();
+                        Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{location.Name}.json", mapData);
+                        tileList = new();
                     }
 
                     
-
-
-
                     //Place Tiles in the Mine // Mine 1-120 // Skull Caverns 121-???
                     for (int i = 1; i <= 220 + caverns_extra; i++)
 
@@ -463,18 +477,16 @@ namespace Tileman
                             PlaceTiles(Game1.getLocationFromName(mineString));
                             Monitor.Log($"Placing Tiles in: {mineString}", LogLevel.Debug);
 
-                            tileDict.Add(mineString, allTiles);
-                            allTiles = new();
 
                             var mapData = new MapData
                             {
-                                AllKaiTilesDict = tileDict,
+                                AllKaiTilesList = tileList,
                             };
 
 
 
-                            Helper.Data.WriteJsonFile<MapData>($"jsons/{mineString}.json", mapData);
-                            tileDict = new();
+                            Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{mineString}.json", mapData);
+                            tileList = new();
 
                         }
                     }
@@ -489,18 +501,15 @@ namespace Tileman
                             PlaceTiles(Game1.getLocationFromName(mineString));
                             Monitor.Log($"Placing Tiles in: {mineString}", LogLevel.Debug);
 
-                            tileDict.Add(mineString, allTiles);
-                            allTiles = new();
-
                             var mapData = new MapData
                             {
-                                AllKaiTilesDict = tileDict,
+                                AllKaiTilesList = tileList,
                             };
 
 
 
-                            Helper.Data.WriteJsonFile<MapData>($"jsons/{mineString}.json", mapData);
-                            tileDict = new();
+                            Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{mineString}.json", mapData);
+                            tileList = new();
 
                         }
                     }
@@ -508,8 +517,6 @@ namespace Tileman
                     AddTileExceptions();
                     RemoveTileExceptions();
                 
-                    this.GetLocationTiles(Game1.currentLocation);
-                    
 
                     do_loop = false;
 
@@ -541,22 +548,13 @@ namespace Tileman
 
                         )
                     {
-                        //mapLocation.map.Layers[0].PickTile().Properties
                         if (new Vector2(Game1.player.position.X, Game1.player.position.Y)!= new Vector2(i, j))
                         {
                             var t = new KaiTile(i, j, mapLocation.Name);
-                            allTiles.Add(t);
-
-                            if(mapLocation.Name == t.tileIsWhere)
-                            {
-                                //ThisLocationTiles.Add(t);
-                            }
-
-
+                            tileList.Add(t);
 
 
                             tile_count++;
-                            ///this.Monitor.Log($"Tile #{tile_count} At {mapLocation.Name}", LogLevel.Debug);
                         }
                     }
                 }
@@ -590,22 +588,19 @@ namespace Tileman
         }
         private void SaveLocationTiles(GameLocation gameLocation)
         {
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{gameLocation.Name}.json") ?? new MapData();
-            if (tileData.AllKaiTilesDict.ContainsKey(gameLocation.Name)
-                && ThisLocationTiles.Count > 0
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json") ?? new MapData();
+            if (ThisLocationTiles.Count > 0
                 && gameLocation.Name == ThisLocationTiles[0].tileIsWhere)
             {
-                tileData.AllKaiTilesDict[gameLocation.Name] = ThisLocationTiles;
-                Helper.Data.WriteJsonFile<MapData>($"jsons/{gameLocation.Name}.json", tileData);
+                tileData.AllKaiTilesList = ThisLocationTiles;
+                Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json", tileData);
             }
         }
         private void GetLocationTiles(GameLocation gameLocation)
         {   
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{gameLocation.Name}.json") ?? new MapData();
-            if (tileData.AllKaiTilesDict.ContainsKey(gameLocation.Name))
-            {
-                ThisLocationTiles = tileData.AllKaiTilesDict[gameLocation.Name];
-            }
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json") ?? new MapData();
+            ThisLocationTiles = tileData.AllKaiTilesList;
+            
 
         }
 
@@ -620,7 +615,7 @@ namespace Tileman
             purchase_count = 0;
             tile_count = 0;
 
-            allTiles.Clear();
+            tileList.Clear();
             ThisLocationTiles.Clear();
 
 
@@ -629,20 +624,41 @@ namespace Tileman
     }
 
 
-        
-        private void CalculateTileSum()
+
+        public void CalculateTileSum()
         {
             var tileCount = 50000;
-            var price = 1.0;
-            var priceIncrease = 0.0008;
             var totalCost = 0;
+            switch (difficulty_mode) {
+                case 0:
+                    var price = 1.0;
+                    var priceIncrease = 0.0008;
+                    
 
-            for(int i = 0; i < tileCount; i++)
+                    for (int i = 0; i < tileCount; i++)
             {
                 totalCost += (int)Math.Floor(price);
                 price += priceIncrease;
 
             }
+                    break;
+
+                case 1:
+                    price = tile_price;
+                    var tilesPurchased =0;
+
+
+                    for (int i = 0; i < tileCount; i++) {
+                        totalCost += (int)price;
+                        if (tilesPurchased > 10) price = 2.0;
+                        if (tilesPurchased > 100) price = 3.0;
+                        if (tilesPurchased > 1000) price = 4.0;
+                        if (tilesPurchased > 10000) price = 5.0;
+
+                    }
+
+                    break;
+        }
             this.Monitor.Log($"Cost of {tileCount} tiles by the end: {totalCost}", LogLevel.Debug);
         }
 
@@ -659,7 +675,7 @@ namespace Tileman
                 {
 
                     ThisLocationTiles.Remove(tile);
-                    allTiles.Remove(tile);
+                    tileList.Remove(tile);
                 }
 
                 else if (locationDelay <= 0 && Game1.player.nextPosition(Game1.player.facingDirection).Intersects(tileBox))
@@ -676,36 +692,49 @@ namespace Tileman
 
         private void SaveModData(object sender, SavedEventArgs e) {
 
-            if (System.IO.File.Exists("config")) createJson("config");
+            //if (System.IO.File.Exists("config")) createJson("config");
 
 
             var tileData = new ModData
             {
-                ToPlaceTiles = this.do_loop,
-                ToggleOverlay = this.toggle_overlay,
-                TilePrice = this.tile_price,
-                TilePriceRaise = this.tile_price_raise
+                ToPlaceTiles   = do_loop,
+                ToggleOverlay  = toggle_overlay,
+                TilePrice      = tile_price,
+                TilePriceRaise = tile_price_raise,
+                CavernsExtra   = caverns_extra,
+                DifficultyMode = difficulty_mode,
+                PurchaseCount  = purchase_count
             };
 
             //this.Helper.Data.WriteSaveData("example-key", tileData);
-            Helper.Data.WriteJsonFile<ModData>("config.json", tileData);
+            Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json", tileData);
         }
 
         private void LoadModData(object sender, SaveLoadedEventArgs e) {
 
             Monitor.Log("Mod Data Loaded",LogLevel.Debug);
 
-            if (System.IO.File.Exists("config.json")) createJson("config");
+            var tileData = Helper.Data.ReadJsonFile<ModData>("config.json") ?? new ModData();
 
-            var tileData = this.Helper.Data.ReadJsonFile<ModData>("config.json") ?? new ModData();
-            //var tileData = this.Helper.Data.ReadSaveData<ModData>("example-key");
+            if (Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json") != null)
+            {
+                tileData = Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json") ?? new ModData();
 
-            this.do_loop = tileData.ToPlaceTiles;
-            this.toggle_overlay = tileData.ToggleOverlay;
-            this.do_collision = tileData.DoCollision;
-            this.tile_price = tileData.TilePrice;
-            this.tile_price_raise = tileData.TilePriceRaise;
-            this.caverns_extra = tileData.CavernsExtra;
+            }
+            else
+            {
+                Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json", tileData);
+            }
+            
+
+            do_loop          = tileData.ToPlaceTiles;
+            toggle_overlay   = tileData.ToggleOverlay;
+            do_collision     = tileData.DoCollision;
+            tile_price       = tileData.TilePrice;
+            tile_price_raise = tileData.TilePriceRaise;
+            caverns_extra    = tileData.CavernsExtra;
+            difficulty_mode  = tileData.DifficultyMode;
+            purchase_count   = tileData.PurchaseCount;
 
 
 

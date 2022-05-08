@@ -12,6 +12,8 @@ namespace Tileman
         public int tileY = 0;
         public int tileW = Game1.tileSize;
         public int tileH = Game1.tileSize;
+
+
         public string tileIsWhere = null;
         public KaiTile(int TileX,int TileY, string TileIsWhere)
         {
