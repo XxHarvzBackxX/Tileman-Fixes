@@ -10,7 +10,9 @@ namespace Tileman
 
     {
         public bool ToPlaceTiles { get; set; }
-        public bool DoCollision { get; set; }   
+        public bool DoCollision { get; set; }  
+        
+        public bool AllowPlayerPlacement { get; set; }
         public bool ToggleOverlay { get; set; }
 
         public double TilePrice { get; set; }

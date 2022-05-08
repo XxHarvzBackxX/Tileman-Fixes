@@ -1,6 +1,7 @@
 ﻿{
   "ToPlaceTiles": true,
   "DoCollision": true,
+  "AllowPlayerPlacement":  false,
   "ToggleOverlay":  true,
   "TilePrice": 1.0,
   "TilePriceRaise": 0.0008,

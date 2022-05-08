@@ -20,8 +20,10 @@ namespace Tileman
 
         public bool do_loop = true;
         public bool do_collision = true;
+        public bool allow_player_placement = false;
         public bool toggle_overlay = true;
         private bool tool_button_pushed = false;
+
 
         public double tile_price = 1.0;
         public double tile_price_raise = 0.0008;
@@ -628,14 +630,16 @@ namespace Tileman
             for(int i = 0; i < ThisLocationTiles.Count; i++)
             {
                 var t = ThisLocationTiles[i];
-                
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Buildable", "false");
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "");
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoFurniture", "true");
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers", "");
 
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Passable", "");
-                gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Placeable", "");
+                if (!allow_player_placement)
+                {
+                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Buildable", "false");
+                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "");
+                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoFurniture", "true");
+                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers", "");
+                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Placeable", "");
+                }
+                if (do_collision) gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Passable", "");
                 
                 
 

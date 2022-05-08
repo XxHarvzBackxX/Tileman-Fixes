@@ -22,6 +22,11 @@ Does the mod check if you collide with tiles?
 true -> Stop player from crossing them, 
 false -> Allows free-roaming
 
+AllowPlayerPlacement:
+lets the player do things in tile spots 
+true -> allows furniture to be placed in a tile !! NOT RECOMENDED USER BEWARE!!
+false -> no building or furniture placing allowed
+
 ToggleOverlay: 
 true -> See the tiles,
 false -> Hide the tiles
@@ -33,11 +38,11 @@ TilePriceRaise:
 How much the price of tile incrases with each purchase,
 The default raise is set to something very low so tile increases happen very infrequently
 
-CavernsExtra:
+CavernsExtra:s
 How many extra levels of Skull Caverns do you want to have tiles in? 
 The default goes down to floor 100
 
-DifficultyMode:
+DifficultyMode
 0 -> Tile prices increase as normal,
 1 -> Tile price increase by 1 every 10x tiles purchased (10,100,1000...),
 2 -> Every single tile purchased increases the price by 1
