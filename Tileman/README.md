@@ -33,16 +33,16 @@ TilePriceRaise:
 How much the price of tile incrases with each purchase,
 The default raise is set to something very low so tile increases happen very infrequently
 
-CavernsExtra
+CavernsExtra:
 How many extra levels of Skull Caverns do you want to have tiles in? 
 The default goes down to floor 100
 
-DifficultyMode
+DifficultyMode:
 0 -> Tile prices increase as normal,
 1 -> Tile price increase by 1 every 10x tiles purchased (10,100,1000...),
 2 -> Every single tile purchased increases the price by 1
 
-PurchaseCount
-int used to track tiles bought for pregression purposes
+PurchaseCount:
+int used to track tiles bought for progression purposes
 
 ///
