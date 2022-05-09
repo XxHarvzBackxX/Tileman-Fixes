@@ -38,7 +38,7 @@ TilePriceRaise:
 How much the price of tile incrases with each purchase,
 The default raise is set to something very low so tile increases happen very infrequently
 
-CavernsExtra:s
+CavernsExtra:
 How many extra levels of Skull Caverns do you want to have tiles in? 
 The default goes down to floor 100
 

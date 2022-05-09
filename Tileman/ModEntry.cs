@@ -90,7 +90,8 @@ namespace Tileman
                     tempList.Remove(t);
                     var location = Game1.getLocationFromName(gameLocation);
                     location.removeTileProperty(t.tileX, t.tileY, "Back", "Buildable");
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Diggable");
+                    if (location.doesTileHavePropertyNoNull(t.tileX, t.tileY, "Type", "Back") == "Dirt"
+                        || location.doesTileHavePropertyNoNull(t.tileX, t.tileY, "Type", "Back") == "Grass") location.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "true");
 
                     location.removeTileProperty(t.tileX, t.tileY, "Back", "NoFurtniture");
                     location.removeTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers");
@@ -208,6 +209,8 @@ namespace Tileman
 
             }
 
+            
+
             if (!toggle_overlay) return;
             
 
@@ -253,7 +256,6 @@ namespace Tileman
             if (!Context.IsWorldReady) return;
             
             if (Game1.CurrentEvent != null )  return;
-            
 
             GroupIfLocationChange();
 
@@ -308,6 +310,7 @@ namespace Tileman
 
                         //Prevent player from being pushed out of bounds
                         if(do_collision) PlayerCollisionCheck(t);
+                        //Monitor.Log($"{Game1.currentLocation.doesTileHavePropertyNoNull(t.tileX,t.tileY, "Diggable", "back")}", LogLevel.Debug);
 
                     }
 
@@ -430,7 +433,8 @@ namespace Tileman
                 var gameLocation = Game1.currentLocation;
 
                 gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Buildable");
-                gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Diggable");
+                if (gameLocation.doesTileHavePropertyNoNull(thisTile.tileX, thisTile.tileY, "Type", "Back") == "Dirt"
+                        || gameLocation.doesTileHavePropertyNoNull(thisTile.tileX, thisTile.tileY, "Type", "Back") == "Grass") gameLocation.setTileProperty(thisTile.tileX, thisTile.tileY, "Back", "Diggable", "true");
 
                 gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "NoFurniture");
                 gameLocation.removeTileProperty(thisTile.tileX, thisTile.tileY, "Back", "NoSprinklers");
@@ -633,8 +637,9 @@ namespace Tileman
 
                 if (!allow_player_placement)
                 {
+                    gameLocation.removeTileProperty(t.tileX, t.tileY, "Back", "Diggable");
+
                     gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Buildable", "false");
-                    gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "");
                     gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoFurniture", "true");
                     gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers", "");
                     gameLocation.setTileProperty(t.tileX, t.tileY, "Back", "Placeable", "");
@@ -668,41 +673,82 @@ namespace Tileman
 
 
 
-        public void CalculateTileSum()
+        public int CalculateTileSum(int tileCount = 50000, double price = 1.0, double priceIncrease = 0.0008)
         {
-            var tileCount = 50000;
             var totalCost = 0;
             switch (difficulty_mode) {
                 case 0:
-                    var price = 1.0;
-                    var priceIncrease = 0.0008;
-                    
+                                       
 
                     for (int i = 0; i < tileCount; i++)
-            {
-                totalCost += (int)Math.Floor(price);
-                price += priceIncrease;
+                    {
+                        totalCost += (int)Math.Floor(price);
+                        price += priceIncrease;
 
-            }
+                    }
                     break;
 
                 case 1:
                     price = tile_price;
-                    var tilesPurchased =0;
 
 
-                    for (int i = 0; i < tileCount; i++) {
+                    for (int i = 0; i < tileCount; i++) 
+                    {
                         totalCost += (int)price;
-                        if (tilesPurchased > 10) price = 2.0;
-                        if (tilesPurchased > 100) price = 3.0;
-                        if (tilesPurchased > 1000) price = 4.0;
-                        if (tilesPurchased > 10000) price = 5.0;
+                        if (purchase_count > 10) price = 2.0;
+                        if (purchase_count > 100) price = 3.0;
+                        if (purchase_count > 1000) price = 4.0;
+                        if (purchase_count > 10000) price = 5.0;
 
                     }
 
                     break;
-        }
+
+                case 2:
+                    price = tile_price;
+
+
+                    for (int i = 0; i < tileCount; i++)
+                    {
+                        totalCost += (int)price;
+                        if (purchase_count > 10) price = 2.0;
+                        if (purchase_count > 100) price = 3.0;
+                        if (purchase_count > 1000) price = 4.0;
+                        if (purchase_count > 10000) price = 5.0;
+
+                    }
+
+                    break;
+            }
             this.Monitor.Log($"Cost of {tileCount} tiles by the end: {totalCost}", LogLevel.Debug);
+
+            return totalCost;
+        }
+
+        public void BuyAllTilesInLocation(GameLocation gameLocation)
+        {
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation}.json") ?? new MapData();
+            tileList = tileData.AllKaiTilesList;
+
+            if (CalculateTileSum(tileList.Count) <= Game1.player.Money)
+            {
+                for (int i = 0; i < tileList.Count; i++)
+                {
+                    PurchaseTileCheck(tileList[i]);
+                }
+
+
+                var mapData = new MapData
+                {
+                    AllKaiTilesList = tileList,
+                };
+
+
+
+                Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation}.json", mapData);
+                tileList=new();
+            }
+
         }
 
         private void PlayerCollisionCheck(KaiTile tile)
@@ -718,7 +764,8 @@ namespace Tileman
                 {
                     var gameLocation = Game1.currentLocation;
                     gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Buildable");
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Diggable");
+                    if (gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Dirt"
+                        || gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Grass")gameLocation.setTileProperty(tile.tileX, tile.tileY, "Back", "Diggable","true");
 
                     gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoFurtniture");
                     gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoSprinklers");
