@@ -417,7 +417,7 @@ namespace Tileman
                         if (purchase_count > 10000) tile_price = 5;
                         break;
 
-                    case 3:
+                    case 2:
                         //Increment tile price with each one purchased
                         tile_price++;
                         break;
