@@ -10,6 +10,12 @@ Check him out here: https://www.youtube.com/c/Settledrs/featured
 
 ///
 
+Press 'G' to turn the tile overlay on/off
+
+Press 'H' to switch control mode. One for buying the tile in front of you, the other to use the mouse instead
+
+///
+
 
 Here is a short explanation for the values used in the config.json (There are seperate config.json files for each save for progression purposes)
 

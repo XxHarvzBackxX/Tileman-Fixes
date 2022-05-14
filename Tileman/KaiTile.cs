@@ -26,8 +26,6 @@ namespace Tileman
         public void DrawTile(Texture2D texture, SpriteBatch spriteBatch) 
         {
 
-            if (Game1.getLocationFromName(this.tileIsWhere) == Game1.currentLocation)
-            {
                 float offsetX = Game1.viewport.X;
                 float offsetY = Game1.viewport.Y;
 
@@ -35,7 +33,6 @@ namespace Tileman
                 spriteBatch.Draw(texture,
                     Utility.getRectangleCenteredAt(new Vector2((this.tileX + 1) * 64 - offsetX - 32, (this.tileY + 1) * 64 - offsetY - 32), 64),
                     Color.White);
-            }
 
 
 

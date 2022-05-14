@@ -23,6 +23,7 @@ namespace Tileman
         public bool allow_player_placement = false;
         public bool toggle_overlay = true;
         private bool tool_button_pushed = false;
+        private bool location_changed = false;
 
 
         public double tile_price = 1.0;
@@ -32,11 +33,12 @@ namespace Tileman
         public int caverns_extra = 0;
         public int difficulty_mode = 0;
         public int purchase_count=0;
+        public int overlay_mode = 0;
 
         int tile_count;
 
-        int amountLocations = 200;
-        int locationDelay = 0;
+        public int amountLocations = 200;
+        private int locationDelay = 0;
 
         List<KaiTile> tileList = new();
         List<KaiTile> ThisLocationTiles = new();
@@ -45,7 +47,6 @@ namespace Tileman
         Texture2D tileTexture2 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
         Texture2D tileTexture3 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
 
-        
 
        
 
@@ -88,16 +89,7 @@ namespace Tileman
                 if (t.IsSpecifiedTile(xTile, yTile, gameLocation)) {
                     
                     tempList.Remove(t);
-                    var location = Game1.getLocationFromName(gameLocation);
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Buildable");
-                    if (location.doesTileHavePropertyNoNull(t.tileX, t.tileY, "Type", "Back") == "Dirt"
-                        || location.doesTileHavePropertyNoNull(t.tileX, t.tileY, "Type", "Back") == "Grass") location.setTileProperty(t.tileX, t.tileY, "Back", "Diggable", "true");
-
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "NoFurtniture");
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "NoSprinklers");
-
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Passable");
-                    location.removeTileProperty(t.tileX, t.tileY, "Back", "Placeable");
+                    RemoveProperties(t, Game1.getLocationFromName(gameLocation));
 
                 }
 
@@ -113,6 +105,24 @@ namespace Tileman
             tileList = new();
 
 
+
+        }
+
+        private void RemoveProperties(KaiTile tile, GameLocation gameLocation)
+        {
+            gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Buildable");
+            if (gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Dirt"
+                || gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Grass") gameLocation.setTileProperty(tile.tileX, tile.tileY, "Back", "Diggable", "true");
+
+            gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoFurtniture");
+            gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoSprinklers");
+
+            gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Passable");
+            gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Placeable");
+
+
+            ThisLocationTiles.Remove(tile);
+            tileList.Remove(tile);
 
         }
         public void RemoveTileExceptions()
@@ -197,7 +207,7 @@ namespace Tileman
 
             if (!Context.IsPlayerFree) return;
 
-            if (Game1.CurrentEvent != null) return;
+            if (Game1.player.isFakeEventActor) return;
             
 
             if (e.Button == SButton.G)
@@ -208,8 +218,23 @@ namespace Tileman
                 if(!toggle_overlay) Game1.playSoundPitched("coin", 600 );
 
             }
+            if (e.Button == SButton.H)
+            {
+                overlay_mode++;
+                var mode = "Mouse";
+                if (overlay_mode > 1)
+                {
+                    mode = "Controller";
+                    overlay_mode = 0;
+                }
 
-            
+                Monitor.Log($"Tileman Overlay Mode set to:{mode}", LogLevel.Debug);
+                Game1.playSoundPitched("coin", 1200);
+
+
+            }
+
+
 
             if (!toggle_overlay) return;
             
@@ -240,6 +265,15 @@ namespace Tileman
             PlaceInMaps();
             GetLocationTiles(Game1.currentLocation);
 
+            
+            Game1.timeOfDay = 900;
+
+            for(int i = 0; i < Game1.locations.Count; i++)
+            { 
+               Monitor.Log($"{Game1.locations[i]}",LogLevel.Debug);
+             }
+            
+
 
 
 
@@ -254,68 +288,84 @@ namespace Tileman
         private void DrawUpdate(object sender, RenderedWorldEventArgs e)
         {
             if (!Context.IsWorldReady) return;
+
+
+
             
-            if (Game1.CurrentEvent != null )  return;
+
+            //Makes sure to not draw while a cutscene is happening
+            if (Game1.CurrentEvent != null) {
+                if (!Game1.CurrentEvent.playerControlSequence)
+                {
+                    return;
+
+                }
+            }
 
             GroupIfLocationChange();
 
-            if (locationDelay > 0) locationDelay--;
 
-
-            if (Game1.spriteBatch.Equals(null) == false && ThisLocationTiles != null)
+            for (int i = 0; i < ThisLocationTiles.Count; i++)
             {
-
-                for (int i = 0; i < ThisLocationTiles.Count; i++)
+                KaiTile t = ThisLocationTiles[i];
+                if (t.tileIsWhere == Game1.currentLocation.Name || Game1.currentLocation.Name == "Temp")
                 {
-                    KaiTile t = ThisLocationTiles[i];
-                    if (t != null && Game1.getLocationFromName(t.tileIsWhere) == Game1.currentLocation)
+                    if (toggle_overlay)
                     {
-                        if (toggle_overlay)
+                        var texture = tileTexture;
+                        var stringColor = Color.Gold;
+                        //Cursor
+                        if (overlay_mode == 1)
                         {
-                            var texture = tileTexture;
-
-                            /*if (Math.Floor((Double)((Game1.getMousePosition().X + Game1.viewport.X) / 64)) == t.tileX &&
-                                Math.Floor((Double)((Game1.getMousePosition().Y + Game1.viewport.Y) / 64)) == t.tileY)
+                                
+                            if (Game1.currentCursorTile == new Vector2(t.tileX,t.tileY))
                             {
                                 texture = tileTexture2;
 
+                                    
+
+                                if (Game1.player.Money < (int)Math.Floor(tile_price))
+                                {
+                                    stringColor = Color.Red;
+                                    texture = tileTexture3;
+                                }
+
                                 e.SpriteBatch.DrawString(Game1.dialogueFont, $"${ (int)Math.Floor(tile_price)}",
-                                 new Vector2(Game1.getMousePosition().X + Game1.viewport.X, Game1.getMousePosition().Y + Game1.viewport.Y), Color.Gold);
+                                    new Vector2(Game1.getMousePosition().X, Game1.getMousePosition().Y - Game1.tileSize), stringColor);
 
-                                if (Game1.player.Money < (int)Math.Floor(tile_price)) { texture = tileTexture3; }
-
-                            }*/
+                            }
+                        }
+                        //Keyboard or Controller
+                        else
+                        {
                             if (Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
                             {
                                 texture = tileTexture2;
-                                var stringColor = Color.Gold;
-                                if (Game1.player.Money < (int)Math.Floor(tile_price)) { 
+                                    
+                                if (Game1.player.Money < (int)Math.Floor(tile_price))
+                                {
                                     texture = tileTexture3;
                                     stringColor = Color.Red;
-                                
+
                                 }
 
 
                                 e.SpriteBatch.DrawString(Game1.dialogueFont, $"${ (int)Math.Floor(tile_price)}",
-                                 new Vector2((t.tileX ) * 64 - Game1.viewport.X, (t.tileY ) * 64 - 64 - Game1.viewport.Y), stringColor);
+                                    new Vector2((t.tileX) * 64 - Game1.viewport.X, (t.tileY) * 64 - 64 - Game1.viewport.Y), stringColor);
 
 
 
 
                             }
-
-                            t.DrawTile(texture, e.SpriteBatch);
                         }
-                         
 
-                        //Prevent player from being pushed out of bounds
-                        if(do_collision) PlayerCollisionCheck(t);
-                        //Monitor.Log($"{Game1.currentLocation.doesTileHavePropertyNoNull(t.tileX,t.tileY, "Diggable", "back")}", LogLevel.Debug);
-
+                        t.DrawTile(texture, e.SpriteBatch);
                     }
 
 
-
+                    //Prevent player from being pushed out of bounds
+                    if (do_collision) PlayerCollisionCheck(t);
+                    //Monitor.Log($"{Game1.currentLocation.doesTileHavePropertyNoNull(t.tileX,t.tileY, "Diggable", "back")}", LogLevel.Debug);
 
                 }
 
@@ -324,7 +374,14 @@ namespace Tileman
 
             }
 
-            if (tool_button_pushed) PurchaseTilePreCheck();
+
+
+
+
+
+                if (tool_button_pushed) PurchaseTilePreCheck();
+
+            
 
 
 
@@ -370,24 +427,24 @@ namespace Tileman
             {
 
                 KaiTile t = ThisLocationTiles[i];
-                //controller or keyboard
 
-                //if cursor on tile
-                if (/*Game1.curso && e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY ||*/
-                Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
+                //Cursor 
+                if (overlay_mode == 1)
                 {
-                    PurchaseTileCheck(t);
-                }
-
-                //mouse
-                /*else
-                {
-                    if (e.Cursor.Tile.X == t.tileX && e.Cursor.Tile.Y == t.tileY )
+                    if (Game1.currentCursorTile == new Vector2(t.tileX,t.tileY) )
                     {
                         PurchaseTileCheck(t);
                     }
+                }
+                //Keyboard or Controller
+                else 
+                {
 
-                }*/
+                    if (Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
+                    {
+                        PurchaseTileCheck(t);
+                    }
+                }
 
             }
 
@@ -412,9 +469,9 @@ namespace Tileman
                     case 1:
                         //Increase tile cost through milestones
                         if (purchase_count > 10) tile_price = 2;
-                        if (purchase_count > 100) tile_price = 3;
-                        if (purchase_count > 1000) tile_price = 4;
-                        if (purchase_count > 10000) tile_price = 5;
+                        if (purchase_count > 100) tile_price = 4;
+                        if (purchase_count > 1000) tile_price = 16;
+                        if (purchase_count > 10000) tile_price = 64;
                         break;
 
                     case 2:
@@ -557,6 +614,16 @@ namespace Tileman
 
         }
 
+        private void PlaceInTempArea(GameLocation gameLocation)
+        {
+            Monitor.Log($"Placing Tiles in Temporary Area: {Game1.whereIsTodaysFest}", LogLevel.Debug);
+
+            
+            PlaceTiles(gameLocation);
+            ThisLocationTiles = tileList;
+            tileList = new();
+        }
+
         private void PlaceTiles(GameLocation mapLocation)
         {
 
@@ -575,6 +642,7 @@ namespace Tileman
                         && mapLocation.isTilePlaceable(new Vector2(i, j))
                         && mapLocation.isTileLocationTotallyClearAndPlaceable(new Vector2(i, j))
                         && mapLocation.Map.Layers[0].IsValidTileLocation(i,j) 
+                        && mapLocation.isCharacterAtTile(new Vector2(i,j)) == null
 
                         )
                     {
@@ -582,7 +650,6 @@ namespace Tileman
                         {
                             var t = new KaiTile(i, j, mapLocation.Name);
                             tileList.Add(t);
-
 
                             tile_count++;
                         }
@@ -596,39 +663,77 @@ namespace Tileman
 
         }
 
-        
 
         private void GroupIfLocationChange()
+
         {
-            if (Game1.locationRequest != null )
+            if (Game1.locationRequest != null)
             {
-                if (Game1.locationRequest.Location != Game1.currentLocation)
+                if (Game1.locationRequest.Location != Game1.currentLocation && !location_changed)
                 {
+                    locationDelay = 20;
+                    location_changed = true;
+
                     SaveLocationTiles(Game1.currentLocation);
 
-                    Monitor.Log($"Grouping Tiles At: {Game1.locationRequest.Location.NameOrUniqueName}",LogLevel.Debug);
+                    
 
-                    GetLocationTiles(Game1.locationRequest.Location);
 
-                    locationDelay = 20;
-
-                }  
+                }
+                
             }
+            else if (location_changed)
+            {
+                if (locationDelay <= 0)
+                {
+                    if (Game1.currentLocation.Name == "Temp")
+                    {
+                        location_changed = false;
+                        PlaceInTempArea(Game1.currentLocation);
+
+                    }
+
+                    else
+                    {
+                        Monitor.Log($"Grouping Tiles At: {Game1.currentLocation.NameOrUniqueName}", LogLevel.Debug);
+                        GetLocationTiles(Game1.currentLocation);
+
+                        location_changed = false;
+                    }
+                }
+
+                locationDelay--;
+
+            }
+
 
         }
         private void SaveLocationTiles(GameLocation gameLocation)
         {
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json") ?? new MapData();
+
+            var locationName = gameLocation.Name;
+
+            if (locationName == "Temp") locationName += Game1.whereIsTodaysFest;
+            Monitor.Log($"Saving in {locationName}", LogLevel.Debug);
+
+            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{locationName}.json") ?? new MapData();
             if (ThisLocationTiles.Count > 0
-                && gameLocation.Name == ThisLocationTiles[0].tileIsWhere)
+                && locationName == ThisLocationTiles[0].tileIsWhere)
             {
                 tileData.AllKaiTilesList = ThisLocationTiles;
-                Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json", tileData);
+                Helper.Data.WriteJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{locationName}.json", tileData);
             }
         }
         private void GetLocationTiles(GameLocation gameLocation)
-        {   
-            var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation.Name}.json") ?? new MapData();
+        {
+            var locationName = gameLocation.Name;
+
+            if (locationName == "Temp")
+            { 
+                locationName += Game1.whereIsTodaysFest;
+            }
+            
+            var tileData = Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{locationName}.json") ?? new MapData();
             ThisLocationTiles = tileData.AllKaiTilesList;
             
             for(int i = 0; i < ThisLocationTiles.Count; i++)
@@ -754,28 +859,28 @@ namespace Tileman
         private void PlayerCollisionCheck(KaiTile tile)
         {
 
-            if (Game1.getLocationFromName(tile.tileIsWhere) == Game1.currentLocation)
+            if (Game1.getLocationFromName(tile.tileIsWhere) == Game1.currentLocation || Game1.currentLocation.Name == "Temp")
             {
 
                 Rectangle tileBox = new(tile.tileX * 64, tile.tileY * 64, tile.tileW, tile.tileH);
                 Rectangle playerBox = Game1.player.GetBoundingBox();
+                if (Game1.currentLocation.Name == "Temp")
+                {
+                    if (playerBox.Intersects(tileBox))
+                    {
+                        if (tileBox.Contains(Game1.player.lastPosition)) {
+                            RemoveProperties(tile, Game1.currentLocation);
+                        }
+                        Game1.player.Position = Game1.player.lastPosition;
+                    }
 
+                }
                 if (playerBox.Center == tileBox.Center || playerBox.Intersects(tileBox) && locationDelay > 0)
                 {
                     var gameLocation = Game1.currentLocation;
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Buildable");
-                    if (gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Dirt"
-                        || gameLocation.doesTileHavePropertyNoNull(tile.tileX, tile.tileY, "Type", "Back") == "Grass")gameLocation.setTileProperty(tile.tileX, tile.tileY, "Back", "Diggable","true");
+                    RemoveProperties(tile, gameLocation);
 
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoFurtniture");
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "NoSprinklers");
-
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Passable");
-                    gameLocation.removeTileProperty(tile.tileX, tile.tileY, "Back", "Placeable");
-
-
-                    ThisLocationTiles.Remove(tile);
-                    tileList.Remove(tile);
+                    
                 }
 
                 
