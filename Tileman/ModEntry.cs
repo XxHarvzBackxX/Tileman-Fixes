@@ -257,9 +257,9 @@ namespace Tileman
             
 
 
-            Game1.timeOfDay = 900;
-            Game1.dayOfMonth = 13;
-            Monitor.Log($"TIME OF DAY SET TO:{Game1.timeOfDay}",LogLevel.Debug);
+            //Game1.timeOfDay = 900;
+            //Game1.dayOfMonth = 13;
+            //Monitor.Log($"TIME OF DAY SET TO:{Game1.timeOfDay}",LogLevel.Debug);
 
 
 
