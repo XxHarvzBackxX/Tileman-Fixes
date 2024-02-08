@@ -315,13 +315,13 @@ namespace Tileman
 
                                     
 
-                                if (Game1.player.Money < (int)Math.Floor(tile_price))
+                                if (Game1.player.Money < (int)dynamic_tile_price) // removing Math.Floor might break the other difficulties but IDC because client is only using diff 1
                                 {
                                     stringColor = Color.Red;
                                     texture = tileTexture3;
                                 }
 
-                                e.SpriteBatch.DrawString(Game1.dialogueFont, $"${ (int)Math.Floor(tile_price)}",
+                                e.SpriteBatch.DrawString(Game1.dialogueFont, $"${dynamic_tile_price}",
                                     new Vector2(Game1.getMousePosition().X, Game1.getMousePosition().Y - Game1.tileSize), stringColor);
 
                             }
@@ -333,7 +333,7 @@ namespace Tileman
                             {
                                 texture = tileTexture2;
                                     
-                                if (Game1.player.Money < (int)Math.Floor(tile_price))
+                                if (Game1.player.Money < (int)dynamic_tile_price)
                                 {
                                     texture = tileTexture3;
                                     stringColor = Color.Red;
@@ -341,7 +341,7 @@ namespace Tileman
                                 }
 
 
-                                e.SpriteBatch.DrawString(Game1.dialogueFont, $"${ (int)Math.Floor(tile_price)}",
+                                e.SpriteBatch.DrawString(Game1.dialogueFont, $"${dynamic_tile_price}",
                                     new Vector2((t.tileX) * 64 - Game1.viewport.X, (t.tileY) * 64 - 64 - Game1.viewport.Y), stringColor);
 
 
@@ -421,12 +421,11 @@ namespace Tileman
 
                 case 1:
                     //Increase tile cost through milestones
-                    if (purchase_count > 1)      dynamic_tile_price = tile_price * 2;
-                    if (purchase_count > 10)     dynamic_tile_price = tile_price * 4;
-                    if (purchase_count > 100)    dynamic_tile_price = tile_price * 8;
-                    if (purchase_count > 1000)   dynamic_tile_price = tile_price * 16;
-                    if (purchase_count > 10000)  dynamic_tile_price = tile_price * 32;
-                    if (purchase_count > 100000) dynamic_tile_price = tile_price * 64;
+                    if (purchase_count <= 10)      dynamic_tile_price = tile_price;
+                    else if (purchase_count <= 100)     dynamic_tile_price = tile_price * 2;
+                    else if (purchase_count <= 1000)    dynamic_tile_price = tile_price * 3;
+                    else if (purchase_count <= 10000) dynamic_tile_price = tile_price * 4;
+                    else dynamic_tile_price = tile_price * 5;
 
                     break;
 
@@ -819,17 +818,17 @@ namespace Tileman
                     break;
 
                 case 1:
+                    if (purchase_count <= 10) dynamic_tile_price = tile_price;
+                    else if (purchase_count <= 100) dynamic_tile_price = tile_price * 2;
+                    else if (purchase_count <= 1000) dynamic_tile_price = tile_price * 3;
+                    else if (purchase_count <= 10000) dynamic_tile_price = tile_price * 4;
+                    else dynamic_tile_price = tile_price * 5;
                     price = tile_price;
 
 
                     for (int i = 0; i < tileCount; i++) 
                     {
                         totalCost += (int)price;
-                        if (purchase_count > 10) price = 2.0;
-                        if (purchase_count > 100) price = 3.0;
-                        if (purchase_count > 1000) price = 4.0;
-                        if (purchase_count > 10000) price = 5.0;
-
                     }
 
                     break;

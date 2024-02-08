@@ -1,0 +1,10 @@
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\bin\Debug\net5.0\Tileman.deps.json
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\bin\Debug\net5.0\Tileman.dll
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\bin\Debug\net5.0\Tileman.pdb
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.csproj.AssemblyReference.cache
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.AssemblyInfoInputs.cache
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.AssemblyInfo.cs
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.csproj.CoreCompileInputs.cache
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.dll
+C:\Users\harve\Documents\GitHub\Tileman-Fixes\Tileman\obj\Debug\net5.0\Tileman.pdb

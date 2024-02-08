@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "UCGp5XEEgfg05f6S9VcCfiscx/UmlC3NIcRvOSXomuq1OojEDrizBL77svXXlkjn/fBm7MBqDrQpr/ZmaXeE/g==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\harve\\Documents\\GitHub\\Tileman-Fixes\\Tileman\\Tileman.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\harve\\.nuget\\packages\\pathoschild.stardew.modbuildconfig\\4.0.1\\pathoschild.stardew.modbuildconfig.4.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
