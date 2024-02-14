@@ -51,6 +51,8 @@ namespace Tileman
         Texture2D tileTexture2 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
         Texture2D tileTexture3 = new(Game1.game1.GraphicsDevice, Game1.tileSize, Game1.tileSize);
 
+        public ModBalanceConfig modBalanceConfig = new ModBalanceConfig();
+
 
        
 
@@ -59,6 +61,7 @@ namespace Tileman
 
         public override void Entry(IModHelper helper)
         {
+            modBalanceConfig = Helper.ReadConfig<ModBalanceConfig>();
             helper.Events.Input.ButtonReleased += this.OnButtonReleased;
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.Display.RenderedWorld += this.DrawUpdate;
@@ -253,8 +256,11 @@ namespace Tileman
         private void DayStartedUpdate(object sender, DayStartedEventArgs e)
         {
 
-            PlaceInMaps();
+            PlaceInMaps(false);
+            if (modBalanceConfig.EnableWeeklyReset)
+                WeeklyWipe();
             GetLocationTiles(Game1.currentLocation);
+            
             
 
 
@@ -412,6 +418,24 @@ namespace Tileman
 
         private void GetTilePrice()
         {
+            if (modBalanceConfig.ScalePriceByPercentage)
+            {
+                double min = 0;
+                if (purchase_count <= 10) dynamic_tile_price = tile_price;
+                else if (purchase_count <= 100) dynamic_tile_price = tile_price * 2;
+                else if (purchase_count <= 1000) dynamic_tile_price = tile_price * 3;
+                else if (purchase_count <= 10000) dynamic_tile_price = tile_price * 4;
+                else dynamic_tile_price = tile_price * 5;
+
+                if (purchase_count <= 10) min = modBalanceConfig.PercentageBaseMinimum;
+                else if (purchase_count <= 100) min = modBalanceConfig.PercentageBaseMinimum + Math.Floor(modBalanceConfig.PercentageBaseMinimum / 3);
+                else if (purchase_count <= 1000) min = modBalanceConfig.PercentageBaseMinimum * 2;
+                else if (purchase_count <= 10000) min = modBalanceConfig.PercentageBaseMinimum * 5;
+                else min = modBalanceConfig.PercentageBaseMinimum * modBalanceConfig.PercentageBaseMinimum;
+
+                tile_price = Math.Floor(Math.Clamp(Game1.player.Money * modBalanceConfig.PercentageScaler, min, double.MaxValue));
+            }
+
             switch (difficulty_mode)
             {
                 case 0:
@@ -508,47 +532,50 @@ namespace Tileman
 
 
         }
-
-        private void PlaceInMaps()
+        private void WeeklyWipe()
+        {
+            bool isWeek = Game1.dayOfMonth % 7 == 0;
+            if (!isWeek)
+                return;
+            do_loop = true;
+            PlaceInMaps(true);
+            PlaceInMaps(true); // god knows why the fuck you have to call this twice - this entire codebase is dog shit
+        }
+        private void PlaceInMaps(bool weeklyWipe)
         {
             if (Context.IsWorldReady)
             {
-
-
-
                 if (do_loop == true)
                 {
-
-
                     var locationCount = 0;
                     foreach (GameLocation location in GetLocations())
                     {
+                        if (weeklyWipe && (location.Name == "FarmHouse" || location.Name == Game1.getFarm().Name))
+                            continue;
                         if (!tileDict.ContainsKey(location.Name))
                         {
-
                             Monitor.Log($"Placing Tiles in: {location.Name}", LogLevel.Debug);
 
                             locationCount++;
 
-                            if (locationCount < amountLocations)
-                            {
+                            //if (locationCount < amountLocations)
+                            //{
                                 PlaceTiles(Game1.getLocationFromName(location.NameOrUniqueName));
 
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            //}
+                            //else
+                            //{
+                                //break;
+                            //}
 
                             tileDict.Add(location.Name, tileList);
                             tileList = new();
                         }
                     }
 
-                    
                     //Place Tiles in the Mine // Mine 1-120 // Skull Caverns 121-???
+                    if (!weeklyWipe)
                     for (int i = 1; i <= 220 + caverns_extra; i++)
-
                     {
                         var mineString = Game1.getLocationFromName("UndergroundMine" + i).Name;
 
@@ -568,7 +595,8 @@ namespace Tileman
                     }
 
                     //VolcanoDungeon0 - 9
-                    for (int i = 0; i <= 9; i++)
+                    if (!weeklyWipe)
+                        for (int i = 0; i <= 9; i++)
 
                     {
                         var mineString = Game1.getLocationFromName("VolcanoDungeon" + i).Name;
@@ -998,24 +1026,24 @@ namespace Tileman
                 PurchaseCount  = purchase_count
             };
 
-            Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json", tileData);
+            Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config_tiles.json", tileData);
         }
 
         private void LoadModData(object sender, SaveLoadedEventArgs e)
         {
 
 
-            var tileData = Helper.Data.ReadJsonFile<ModData>("config.json") ?? new ModData();
+            var tileData = Helper.Data.ReadJsonFile<ModData>("config_tiles.json") ?? new ModData();
             
             //Load config Information
-            if (Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json") != null)
+            if (Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config_tiles.json") != null)
             {
-                tileData = Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json") ?? new ModData();
+                tileData = Helper.Data.ReadJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config_tiles.json") ?? new ModData();
 
             }
             else
             {
-                Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config.json", tileData);
+                Helper.Data.WriteJsonFile<ModData>($"jsons/{Constants.SaveFolderName}/config_tiles.json", tileData);
             }
 
 
@@ -1058,12 +1086,13 @@ namespace Tileman
             Monitor.Log($"Creating {fileName}.json", LogLevel.Debug);
             System.IO.File.Create($"jsons/{fileName}.json");
         }
-
-
-
-
-
-
+        public class ModBalanceConfig
+        {
+            public bool EnableWeeklyReset { get; set; } = true;
+            public bool ScalePriceByPercentage { get; set; } = true;
+            public double PercentageScaler { get; set; } = 0.05;
+            public double PercentageBaseMinimum { get; set; } = 5;
+        }
     }
 
 

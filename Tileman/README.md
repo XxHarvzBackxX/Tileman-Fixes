@@ -17,7 +17,7 @@ Press 'H' to switch control mode. One for buying the tile in front of you, the o
 ///
 
 
-Here is a short explanation for the values used in the config.json (There are seperate config.json files for each save for progression purposes)
+Here is a short explanation for the values used in the config_tiles.json (There are seperate config_tiles.json files for each save for progression purposes)
 
 
 ToPlaceTiles: 
