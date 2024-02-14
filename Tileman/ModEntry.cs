@@ -17,7 +17,7 @@ namespace Tileman
     {
 
 
-
+        public Stack<KaiTile> FloodFillKaiTiles;
         public bool do_loop = true;
         public bool do_collision = true;
         public bool allow_player_placement = false;
@@ -65,6 +65,7 @@ namespace Tileman
             helper.Events.Input.ButtonReleased += this.OnButtonReleased;
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.Display.RenderedWorld += this.DrawUpdate;
+            helper.Events.GameLoop.UpdateTicked += GameLoop_UpdateTicked;
 
 
             helper.Events.GameLoop.Saved += this.SaveModData;
@@ -80,6 +81,18 @@ namespace Tileman
 
             //CalculateTileSum();
 
+        }
+
+        private void GameLoop_UpdateTicked(object sender, UpdateTickedEventArgs e)
+        {
+            if (!Context.IsWorldReady)
+                return;
+            for (int i = 0; i < ThisLocationTiles.Count; i++)
+            {
+                KaiTile t = ThisLocationTiles[i];
+                //Prevent player from being pushed out of bounds
+                if (do_collision) PlayerCollisionCheck(t);
+            }
         }
 
         private void removeSpecificTile(int xTile, int yTile, string gameLocation)
@@ -255,8 +268,8 @@ namespace Tileman
 
         private void DayStartedUpdate(object sender, DayStartedEventArgs e)
         {
-
-            PlaceInMaps(false);
+            if (do_loop)
+                PlaceInMaps();
             if (modBalanceConfig.EnableWeeklyReset)
                 WeeklyWipe();
             GetLocationTiles(Game1.currentLocation);
@@ -360,7 +373,7 @@ namespace Tileman
 
 
                     //Prevent player from being pushed out of bounds
-                    if (do_collision) PlayerCollisionCheck(t);
+                    //if (do_collision) PlayerCollisionCheck(t); /////////////////// << Removed because WHY would you ever check collision in a draw event??
                     //Monitor.Log($"{Game1.currentLocation.doesTileHavePropertyNoNull(t.tileX,t.tileY, "Diggable", "back")}", LogLevel.Debug);
 
                 }
@@ -537,155 +550,114 @@ namespace Tileman
             bool isWeek = Game1.dayOfMonth % 7 == 0;
             if (!isWeek)
                 return;
-            do_loop = true;
-            PlaceInMaps(true);
-            PlaceInMaps(true); // god knows why the fuck you have to call this twice - this entire codebase is dog shit
+            FloodFillMaps(true);
+            Monitor.Log("Weekly wipe of tiles complete.", LogLevel.Info);
         }
-        private void PlaceInMaps(bool weeklyWipe)
+        private void PlaceInMaps()
         {
-            if (Context.IsWorldReady)
+            FloodFillMaps(false);
+            Monitor.Log("Press 'G' to toggle Tileman Overlay", LogLevel.Info); // swapped from Debug to Info - useful to remind the player of the keybinds!
+            Monitor.Log("Press 'H' to switch between Overlay Modes", LogLevel.Info);
+        }
+
+        private void FloodFillMaps(bool weeklyWipe)
+        {
+            FloodFillKaiTiles = new Stack<KaiTile>();
+            string mineString = "UndergroundMine"; // mines
+            GameLocation[] minesLocations = new GameLocation[220 + caverns_extra];
+            for (int i = 1; i - 1 < minesLocations?.Length; i++)
             {
-                if (do_loop == true)
-                {
-                    var locationCount = 0;
-                    foreach (GameLocation location in GetLocations())
-                    {
-                        if (weeklyWipe && (location.Name == "FarmHouse" || location.Name == Game1.getFarm().Name))
-                            continue;
-                        if (!tileDict.ContainsKey(location.Name))
-                        {
-                            Monitor.Log($"Placing Tiles in: {location.Name}", LogLevel.Debug);
-
-                            locationCount++;
-
-                            //if (locationCount < amountLocations)
-                            //{
-                                PlaceTiles(Game1.getLocationFromName(location.NameOrUniqueName));
-
-                            //}
-                            //else
-                            //{
-                                //break;
-                            //}
-
-                            tileDict.Add(location.Name, tileList);
-                            tileList = new();
-                        }
-                    }
-
-                    //Place Tiles in the Mine // Mine 1-120 // Skull Caverns 121-???
-                    if (!weeklyWipe)
-                    for (int i = 1; i <= 220 + caverns_extra; i++)
-                    {
-                        var mineString = Game1.getLocationFromName("UndergroundMine" + i).Name;
-
-                        if (!tileDict.ContainsKey(mineString))
-                        {
-
-                            if (Game1.getLocationFromName(mineString) != null)
-                            {
-                                PlaceTiles(Game1.getLocationFromName(mineString));
-                                Monitor.Log($"Placing Tiles in: {mineString}", LogLevel.Debug);
-
-                                tileDict.Add(mineString, tileList);
-                                tileList = new();
-                            }
-
-                        }
-                    }
-
-                    //VolcanoDungeon0 - 9
-                    if (!weeklyWipe)
-                        for (int i = 0; i <= 9; i++)
-
-                    {
-                        var mineString = Game1.getLocationFromName("VolcanoDungeon" + i).Name;
-                        
-                        if (!tileDict.ContainsKey(mineString))
-                        {
-
-                            if (Game1.getLocationFromName(mineString) != null)
-                            {
-                                PlaceTiles(Game1.getLocationFromName(mineString));
-                                Monitor.Log($"Placing Tiles in: {mineString}", LogLevel.Debug);
-
-                                tileDict.Add(mineString, tileList);
-                                tileList = new();
-                            }
-                        }
-                    }
-
-                    AddTileExceptions();
-                    RemoveTileExceptions();
-                
-
-                    do_loop = false;
-
-                    //Save all the created files
-                    foreach (KeyValuePair<string, List<KaiTile>> entry in tileDict)
-                    {
-                        SaveLocationTiles(Game1.getLocationFromName(entry.Key));
-                    }
-                    tileDict.Clear();
-
-                    Monitor.Log("Press 'G' to toggle Tileman Overlay", LogLevel.Debug);
-                    Monitor.Log("Press 'H' to switch between Overlay Modes", LogLevel.Debug);
-
-
-                }
+                minesLocations[i - 1] = Game1.getLocationFromName(mineString + i);
             }
 
+            string volcanoString = "VolcanoDungeon"; // volcano
+            GameLocation[] volcanoLocations = new GameLocation[10];
+            for (int i = 1; i - 1 < minesLocations?.Length; i++)
+            {
+                minesLocations[i - 1] = Game1.getLocationFromName(volcanoString + i);
+            }
+
+            foreach (GameLocation location in GetLocations()?.Concat(minesLocations)?.Concat(volcanoLocations))
+            {
+                if (location == null || location is null)
+                    continue;
+                if (location.Name == Game1.getFarm().Name || location.Name == "FarmHouse" || location.Name.Contains(mineString) || location.Name.Contains(volcanoString))
+                    if (weeklyWipe)
+                        continue;
+                FloodFillTilesOnMap(location);
+            }
+            do_loop = false; // should have no impact but just a failsafe incase other functions rely on this bool being false after resetting maps
         }
+        private void FloodFillTilesOnMap(GameLocation gl)
+        {
+            int x = -1;
+            int y = -1;
+            foreach (KeyValuePair<string, xTile.ObjectModel.PropertyValue> kvp in gl.Map.Properties)
+            {
+                if (kvp.Key != "Warp")
+                    continue;
+                string[] split = kvp.Value.ToString().Split(' ');
+                Point startingPoint = new Point(int.Parse(split[0]), int.Parse(split[1]));
+                if (startingPoint.X > -1 && startingPoint.Y > -1)
+                {
+                    x = startingPoint.X;
+                    y = startingPoint.Y;
+                    break;
+                }
+            }
+            FloodFillKaiTiles.Clear();
+            FloodFillIterative(gl, x, y);
+            tileDict.Add(gl.NameOrUniqueName, FloodFillKaiTiles.ToList());
+        }
+        private void FloodFillIterative(GameLocation gl, int startX, int startY)
+        {
+            var width = gl.Map.GetLayer("Back").TileWidth;
+            var height = gl.Map.GetLayer("Back").TileHeight;
+            var flooded = new List<Vector2>();
+            var tested = new HashSet<Vector2>();
+            var queue = new Queue<Vector2>();
+            queue.Enqueue(new Vector2(startX, startY));
+            while (queue.Count > 0)
+            {
+                var tile = queue.Dequeue();
+                if (tile.X < 0 || tile.Y < 0 || tile.X >= width || tile.Y >= height || !tested.Add(tile) || DoesTileCollide(gl, (int)tile.X, (int)tile.Y))
+                    continue;
+
+                flooded.Add(tile);
+                foreach (var neighbour in GetFourNeighbours(tile, width, height))
+                {
+                    if (!tested.Contains(neighbour))
+                    {
+                        queue.Enqueue(neighbour);
+                    }
+                }
+            }
+        }
+        private List<Vector2> GetFourNeighbours(Vector2 tile, int width, int height)
+        {
+            List<Vector2> list = new List<Vector2>();
+
+            if (tile.X - 1 >= 0)
+                list.Add(new Vector2(tile.X - 1, tile.Y)); // left
+            if (tile.X + 1 < width)
+                list.Add(new Vector2(tile.X + 1, tile.Y)); // right
+            if (tile.Y - 1 >= 0)
+                list.Add(new Vector2(tile.X, tile.Y - 1)); // up
+            if (tile.Y + 1 < height)                       // it will never cease to annoy me how these two are flipped.
+                list.Add(new Vector2(tile.X, tile.Y + 1)); // down
+            return list;
+        }
+        private bool DoesTileCollide(GameLocation gl, int x, int y)
+            => !gl.isTilePassable(new xTile.Dimensions.Location(x, y), Game1.viewport) && !gl.isTilePlaceable(new Vector2(x, y));
+
 
         private void PlaceInTempArea(GameLocation gameLocation)
         {
             Monitor.Log($"Placing Tiles in Temporary Area: {Game1.whereIsTodaysFest}", LogLevel.Debug);
-
-            
-            PlaceTiles(gameLocation);
-            ThisLocationTiles = tileList;
+            FloodFillKaiTiles.Clear();
+            FloodFillTilesOnMap(gameLocation);
+            ThisLocationTiles = FloodFillKaiTiles.ToList();
             tileList = new();
-
-
-        }
-
-        private void PlaceTiles(GameLocation mapLocation)
-        {
-
-            int mapWidth = mapLocation.map.Layers[0].LayerWidth;
-            int mapHeight = mapLocation.map.Layers[0].LayerHeight;
-
-
-            for (int i = 1; i < mapWidth - 1; i++)
-            {
-                for (int j = 1; j < mapHeight - 1; j++)
-                {
-                    if (/*!IsTileAt(i, j, mapLocation)
-                        &&*/ !mapLocation.isObjectAtTile(i, j) 
-                        && !mapLocation.isOpenWater(i, j) 
-                        && !mapLocation.isTerrainFeatureAt(i, j) 
-                        && mapLocation.isTilePlaceable(new Vector2(i, j))
-                        && mapLocation.isTileLocationTotallyClearAndPlaceable(new Vector2(i, j))
-                        && mapLocation.Map.Layers[0].IsValidTileLocation(i,j) 
-                        && mapLocation.isCharacterAtTile(new Vector2(i,j)) == null
-
-                        )
-                    {
-                        if (new Vector2(Game1.player.position.X, Game1.player.position.Y)!= new Vector2(i, j))
-                        {
-                            var t = new KaiTile(i, j, mapLocation.Name);
-                            tileList.Add(t);
-
-                            tile_count++;
-                        }
-                    }
-                }
-            }
-
-
-            
-            
-
         }
 
 
@@ -830,7 +802,7 @@ namespace Tileman
 
 
 
-        public int CalculateTileSum(int tileCount = 50000, double price = 1.0, double priceIncrease = 0.0008)
+        public int CalculateTileSum(int tileCount = 50000, double price = 1.0, double priceIncrease = 0.0008) // no clue, not even gonna touch this.
         {
             var totalCost = 0;
             switch (difficulty_mode) {
@@ -882,7 +854,7 @@ namespace Tileman
             return totalCost;
         }
 
-        public void BuyAllTilesInLocation(GameLocation gameLocation)
+        /*public void BuyAllTilesInLocation(GameLocation gameLocation) ////////////////////////////////////////////////////////// why is this here if it's never used?????
         {
             var tileData = this.Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{gameLocation}.json") ?? new MapData();
             tileList = tileData.AllKaiTilesList;
@@ -906,9 +878,9 @@ namespace Tileman
                 tileList=new();
             }
 
-        }
+        } */
 
-        private void PlayerCollisionCheck(KaiTile tile)
+        private void PlayerCollisionCheck(KaiTile tile) // why is this called in the draw loop? nobody knows. so i made it get called in uhhhhh update ticked instead
         {
 
             if (Game1.getLocationFromName(tile.tileIsWhere) == Game1.currentLocation || Game1.currentLocation.Name == "Temp")
@@ -922,7 +894,6 @@ namespace Tileman
                 {
                     if (collisionTick > 120)
                     {
-                        Game1.player.Money += (int)tile_price;
                         collisionTick = 0;
                         PurchaseTileCheck(tile);
 
@@ -939,6 +910,7 @@ namespace Tileman
 
                     if (Math.Abs(xDist - xDist2) >= Math.Abs(yDist - yDist2) + xOffset)
                     {
+                        //Collide from Left
                         if (xDist >= xDist2)
                         {
 
@@ -985,7 +957,6 @@ namespace Tileman
                 {
                     if (collisionTick > 120)
                     {
-                        Game1.player.Money += (int)tile_price;
                         collisionTick = 0;
                         PurchaseTileCheck(tile);
 
