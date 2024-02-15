@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Netcode;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
@@ -16,7 +17,7 @@ namespace Tileman
     public class ModEntry : Mod
     {
 
-
+        private const int LadderTileIndex = 115;
         public Stack<KaiTile> FloodFillKaiTiles;
         public bool do_loop = true;
         public bool do_collision = true;
@@ -66,6 +67,7 @@ namespace Tileman
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.Display.RenderedWorld += this.DrawUpdate;
             helper.Events.GameLoop.UpdateTicked += GameLoop_UpdateTicked;
+            helper.Events.Player.Warped += Player_Warped;
 
 
             helper.Events.GameLoop.Saved += this.SaveModData;
@@ -81,6 +83,16 @@ namespace Tileman
 
             //CalculateTileSum();
 
+        }
+
+        private void Player_Warped(object sender, WarpedEventArgs e)
+        {
+            if ((e.NewLocation.Name.Contains("UndergroundMine") || e.NewLocation.Name.Contains("VolcanoDungeon")) && Helper.Data.ReadJsonFile<MapData>($"jsons/{Constants.SaveFolderName}/{e.NewLocation.NameOrUniqueName}.json") == null)
+            {
+                FloodFillTilesOnMap(e.NewLocation);
+                tileDict.Add(e.NewLocation.NameOrUniqueName, FloodFillKaiTiles.ToList());
+                ThisLocationTiles = FloodFillKaiTiles.ToList();
+            }
         }
 
         private void GameLoop_UpdateTicked(object sender, UpdateTickedEventArgs e)
@@ -299,10 +311,6 @@ namespace Tileman
         {
             if (!Context.IsWorldReady) return;
 
-
-
-            
-
             //Makes sure to not draw while a cutscene is happening
             if (Game1.CurrentEvent != null) {
                 if (!Game1.CurrentEvent.playerControlSequence)
@@ -311,10 +319,8 @@ namespace Tileman
 
                 }
             }
-
-            GroupIfLocationChange();
-
-
+            GroupIfLocationChange(); // i don't know why this is done in the draw update and not UpdateTicked?
+                                     // to be honest with you, this function's purpose is defunct anyway - USE A WARPED EVENT
             for (int i = 0; i < ThisLocationTiles.Count; i++)
             {
                 KaiTile t = ThisLocationTiles[i];
@@ -334,7 +340,8 @@ namespace Tileman
 
                                     
 
-                                if (Game1.player.Money < (int)dynamic_tile_price) // removing Math.Floor might break the other difficulties but IDC because client is only using diff 1
+                                if (Game1.player.Money < (int)dynamic_tile_price) // removing Math.Floor might break the other difficulties but IDC because
+                                                                                  // difficulty 1 is the only good option realistically.
                                 {
                                     stringColor = Color.Red;
                                     texture = tileTexture3;
@@ -370,30 +377,12 @@ namespace Tileman
                         }
                         t.DrawTile(texture, e.SpriteBatch);
                     }
-
-
                     //Prevent player from being pushed out of bounds
                     //if (do_collision) PlayerCollisionCheck(t); /////////////////// << Removed because WHY would you ever check collision in a draw event??
                     //Monitor.Log($"{Game1.currentLocation.doesTileHavePropertyNoNull(t.tileX,t.tileY, "Diggable", "back")}", LogLevel.Debug);
-
                 }
-
-
-
-
             }
-
-
-
-
-
-
                 if (tool_button_pushed) PurchaseTilePreCheck();
-
-            
-
-
-
         }
 
 
@@ -406,29 +395,8 @@ namespace Tileman
                     where building.indoors.Value != null
                     select building.indoors.Value
                 );
-
-            
-
             return locations;
         }
-        
-
-
-        private bool IsTileAt(int tileX, int tileY, GameLocation TileIsAt)
-        {
-            foreach (KaiTile t in tileList)
-            {
-                if (tileX == t.tileX && tileY == t.tileY && TileIsAt == Game1.getLocationFromName(t.tileIsWhere))
-                {
-                    return true;
-                }
-
-            }
-            return false;
-
-
-        }
-
         private void GetTilePrice()
         {
             if (modBalanceConfig.ScalePriceByPercentage)
@@ -478,9 +446,7 @@ namespace Tileman
 
             for (int i = 0; i < ThisLocationTiles.Count; i++)
             {
-
                 KaiTile t = ThisLocationTiles[i];
-
                 //Cursor 
                 if (overlay_mode == 1)
                 {
@@ -492,7 +458,6 @@ namespace Tileman
                 //Keyboard or Controller
                 else 
                 {
-
                     if (Game1.player.nextPositionTile().X == t.tileX && Game1.player.nextPositionTile().Y == t.tileY)
                     {
                         PurchaseTileCheck(t);
@@ -552,6 +517,7 @@ namespace Tileman
                 return;
             FloodFillMaps(true);
             Monitor.Log("Weekly wipe of tiles complete.", LogLevel.Info);
+            Game1.hudMessages.Add(new HUDMessage("Weekly wipe of tiles has occurred!"));
         }
         private void PlaceInMaps()
         {
@@ -560,7 +526,7 @@ namespace Tileman
             Monitor.Log("Press 'H' to switch between Overlay Modes", LogLevel.Info);
         }
 
-        private void FloodFillMaps(bool weeklyWipe)
+        private void FloodFillMaps(bool weeklyWipe) // the entrance to hell
         {
             FloodFillKaiTiles = new Stack<KaiTile>();
             string mineString = "UndergroundMine"; // mines
@@ -572,9 +538,9 @@ namespace Tileman
 
             string volcanoString = "VolcanoDungeon"; // volcano
             GameLocation[] volcanoLocations = new GameLocation[10];
-            for (int i = 1; i - 1 < minesLocations?.Length; i++)
+            for (int i = 1; i - 1 < volcanoLocations?.Length; i++)
             {
-                minesLocations[i - 1] = Game1.getLocationFromName(volcanoString + i);
+                volcanoLocations[i - 1] = Game1.getLocationFromName(volcanoString + i);
             }
 
             foreach (GameLocation location in GetLocations()?.Concat(minesLocations)?.Concat(volcanoLocations))
@@ -588,52 +554,95 @@ namespace Tileman
             }
             do_loop = false; // should have no impact but just a failsafe incase other functions rely on this bool being false after resetting maps
         }
-        private void FloodFillTilesOnMap(GameLocation gl)
+        private void FloodFillTilesOnMap(GameLocation gl) // i don't even want to know the time efficiency for this entire function with all of its calls
         {
-            int x = -1;
-            int y = -1;
-            foreach (KeyValuePair<string, xTile.ObjectModel.PropertyValue> kvp in gl.Map.Properties)
+            List<Vector2> points = new List<Vector2>();
+            if (!gl.NameOrUniqueName.Contains("UndergroundMine"))
             {
-                if (kvp.Key != "Warp")
-                    continue;
-                string[] split = kvp.Value.ToString().Split(' ');
-                Point startingPoint = new Point(int.Parse(split[0]), int.Parse(split[1]));
-                if (startingPoint.X > -1 && startingPoint.Y > -1)
+                foreach (KeyValuePair<string, xTile.ObjectModel.PropertyValue> kvp in gl.Map.Properties)
                 {
-                    x = startingPoint.X;
-                    y = startingPoint.Y;
-                    break;
-                }
-            }
-            FloodFillKaiTiles.Clear();
-            FloodFillIterative(gl, x, y);
-            tileDict.Add(gl.NameOrUniqueName, FloodFillKaiTiles.ToList());
-        }
-        private void FloodFillIterative(GameLocation gl, int startX, int startY)
-        {
-            var width = gl.Map.GetLayer("Back").TileWidth;
-            var height = gl.Map.GetLayer("Back").TileHeight;
-            var flooded = new List<Vector2>();
-            var tested = new HashSet<Vector2>();
-            var queue = new Queue<Vector2>();
-            queue.Enqueue(new Vector2(startX, startY));
-            while (queue.Count > 0)
-            {
-                var tile = queue.Dequeue();
-                if (tile.X < 0 || tile.Y < 0 || tile.X >= width || tile.Y >= height || !tested.Add(tile) || DoesTileCollide(gl, (int)tile.X, (int)tile.Y))
-                    continue;
-
-                flooded.Add(tile);
-                foreach (var neighbour in GetFourNeighbours(tile, width, height))
-                {
-                    if (!tested.Contains(neighbour))
+                    if (kvp.Key != "Warp")
+                        continue;
+                    string[] split = kvp.Value.ToString().Split(' ');
+                    for (int i = 0; i < split.Length / 5; i++) // format::      x  y  NAME  destX  destY | x  y  NAME  destX  destY
                     {
-                        queue.Enqueue(neighbour);
+                        Point startingPoint = new Point(int.Parse(split[0 + (5 * i)]), int.Parse(split[1 + (5 * i)])); // offset splits by 5i
+                        if (startingPoint.X > -1 && startingPoint.Y > -1)
+                        {
+                            points.Add(new Vector2(startingPoint.X, startingPoint.Y));
+                            break;
+                        }
                     }
                 }
             }
+            else
+            {
+                Vector2 tile = Vector2.One * -1;
+                if (gl is MineShaft)
+                {
+                    tile = Helper.Reflection.GetField<NetVector2>((MineShaft)gl, "netTileBeneathLadder", true).GetValue();
+                    points.Add(tile);
+                }
+            }
+            FloodFillKaiTiles.Clear();
+            var listOfLists = new List<List<Vector2>>();
+            foreach (Vector2 point in points)
+            {
+                listOfLists.Add(FloodFillIterative(gl, (int)point.X, (int)point.Y));
+            }
+            var list = new List<Vector2>();
+            try
+            {
+                list = listOfLists?.OrderByDescending(m => m.Count())?.First() ?? new List<Vector2>(); // biggest list - biggest always means bestest
+            }
+            catch
+            {
+                list = new List<Vector2>();
+            }
+            foreach (var tile in list)
+            {
+                FloodFillKaiTiles.Push(new KaiTile((int)tile.X, (int)tile.Y, gl.NameOrUniqueName));
+            }
+            tileDict.Add(gl.NameOrUniqueName, FloodFillKaiTiles.ToList()); // add valid tiles to the tileDict
         }
-        private List<Vector2> GetFourNeighbours(Vector2 tile, int width, int height)
+        private List<Vector2> FloodFillIterative(GameLocation gl, int startX, int startY) // the only documented function in this godforsaken document
+        {
+            int width = gl.Map.GetLayer("Back").LayerWidth;
+            int height = gl.Map.GetLayer("Back").LayerHeight;
+
+            var flooded = new List<Vector2>(); // tiles confirmed to be accessible - gets assigned into tileDict later
+            var tested = new HashSet<Vector2>(); // tiles that have been tested - could be accessible or inaccessible, but won't be checked again
+            var queue = new Queue<Vector2>(); // tiles that are yet to be tested
+
+            var start = new Vector2(startX, startY);
+            queue.Enqueue(start); // queue up the origin
+            while (queue.Count > 0) // while still left to check any
+            {
+                var tile = queue.Dequeue();
+                if (tile == start)
+                {
+                    foreach (var neighbour in GetFourNeighbours(tile, width, height)) // get the origin's neighbours
+                        queue.Enqueue(neighbour); // queue the origin's neighbour
+                    tested.Add(tile);
+                    continue;
+                }
+
+                if (tile.X < 0 || tile.Y < 0 || tile.X > width || tile.Y > height        // if OOB, already tested, or tile is collideable
+                    || !tested.Add(tile) || DoesTileCollide(gl, (int)tile.X, (int)tile.Y))
+                    continue;                                                              // goto next tile
+
+                flooded.Add(tile); // if this tile made it past the checks, it means it's accessible, so add it to the flooded list
+                foreach (var neighbour in GetFourNeighbours(tile, width, height)) // get this tile's 4 neighbours and iterate them
+                {
+                    if (!tested.Contains(neighbour)) // as long as the neighbour hasn't already been tested
+                    {
+                        queue.Enqueue(neighbour); // queue the neighbour
+                    }
+                }
+            }
+            return flooded;
+        }
+        private List<Vector2> GetFourNeighbours(Vector2 tile, int width, int height) // could definitely have been done using a yield return LOL
         {
             List<Vector2> list = new List<Vector2>();
 
@@ -648,7 +657,8 @@ namespace Tileman
             return list;
         }
         private bool DoesTileCollide(GameLocation gl, int x, int y)
-            => !gl.isTilePassable(new xTile.Dimensions.Location(x, y), Game1.viewport) && !gl.isTilePlaceable(new Vector2(x, y));
+            => !gl.isTilePassable(new xTile.Dimensions.Location(x, y), Game1.viewport) || gl.GetFurnitureAt(new Vector2(x, y)) != null || gl.terrainFeatures.TryGetValue(new Vector2(x, y), out _) || gl.getLargeTerrainFeatureAt(x, y) != null || gl.Objects.TryGetValue(new Vector2(x, y), out _) ||
+            gl.getTileIndexAt(x, y, "Back") == -1 || gl.warps.Any(w => w.X == x && w.Y == y);
 
 
         private void PlaceInTempArea(GameLocation gameLocation)
@@ -718,7 +728,7 @@ namespace Tileman
         private void SaveLocationTiles(GameLocation gameLocation)
         {
 
-            var locationName = gameLocation.Name;
+            var locationName = gameLocation.NameOrUniqueName;
 
             if (locationName == "Temp") locationName += Game1.whereIsTodaysFest;
             Monitor.Log($"Saving in {locationName}", LogLevel.Debug);
@@ -739,7 +749,7 @@ namespace Tileman
         }
         private void GetLocationTiles(GameLocation gameLocation)
         {
-            var locationName = gameLocation.Name;
+            var locationName = gameLocation.NameOrUniqueName;
 
             if (locationName == "Temp") locationName += Game1.whereIsTodaysFest;
 
@@ -1061,8 +1071,9 @@ namespace Tileman
         {
             public bool EnableWeeklyReset { get; set; } = true;
             public bool ScalePriceByPercentage { get; set; } = true;
-            public double PercentageScaler { get; set; } = 0.05;
-            public double PercentageBaseMinimum { get; set; } = 5;
+            public double PercentageScaler { get; set; } = 0.025;
+            public double PercentageBaseMinimum { get; set; } = 3;
+            public double PercentageBaseMaximum { get; set; } = 500;
         }
     }
 

@@ -5,21 +5,22 @@ using StardewValley;
 
 namespace Tileman
 {
-    public class KaiTile 
+    public readonly struct KaiTile 
     {
 
-        public int tileX = 0;
-        public int tileY = 0;
-        public int tileW = Game1.tileSize;
-        public int tileH = Game1.tileSize;
+        public readonly int tileX;
+        public readonly int tileY;
+        public readonly int tileW;
+        public readonly int tileH;
 
 
-        public string tileIsWhere = null;
-        public KaiTile(int TileX,int TileY, string TileIsWhere)
+        public readonly string tileIsWhere;
+        public KaiTile(int TileX, int TileY, string TileIsWhere)
         {
-            this.tileX = TileX;
-            this.tileY = TileY;
-            this.tileIsWhere = TileIsWhere;
+            tileX = (TileX >= 0) ? TileX : 0;
+            tileY = (TileY >= 0) ? TileY : 0;
+            tileIsWhere = TileIsWhere;
+            tileW = tileH = 64;
         }
 
 
